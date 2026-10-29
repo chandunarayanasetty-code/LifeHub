@@ -3,13 +3,19 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { demoUser, getMockData } from "@/lib/mock-data";
 import { buildSearchItems } from "@/lib/search";
+import { listTasks } from "@/lib/tasks/repository";
 
 // Preview data is generated relative to "today", so the shell renders per
 // request rather than being frozen at build time.
 export const dynamic = "force-dynamic";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const data = getMockData();
+  const tasks = await listTasks();
   const unreadCount = data.notifications.filter(
     (notification) => !notification.read,
   ).length;
@@ -17,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fullName: demoUser.fullName,
     email: demoUser.email,
   };
-  const searchItems = buildSearchItems(data);
+  const searchItems = buildSearchItems({ ...data, tasks });
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[268px_minmax(0,1fr)]">

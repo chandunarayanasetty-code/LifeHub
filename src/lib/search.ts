@@ -10,8 +10,9 @@ export interface SearchItem {
 }
 
 /**
- * Phase 1 search index. Phase 6 replaces this with a database query that is
- * always scoped to the signed-in user; the UI contract stays the same.
+ * Search index for the command palette. Phase 6 replaces this with a database
+ * query that is always scoped to the signed-in user; the UI contract stays the
+ * same. Tasks come from the local task store, notes from sample data.
  */
 export function buildSearchItems(
   data: Pick<MockData, "tasks" | "notes">,

@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# local task storage (Phase 2 stand-in for PostgreSQL)
+/.data/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

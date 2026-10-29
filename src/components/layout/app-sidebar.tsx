@@ -113,21 +113,21 @@ export function AppSidebar({ unreadCount, user }: AppSidebarProps) {
       <div className="space-y-3 border-t border-sidebar-border p-3">
         <div className="rounded-xl border border-sidebar-border bg-muted/35 p-3">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium">Phase 1 of 8</span>
-            <span className="text-muted-foreground">Foundation</span>
+            <span className="font-medium">Phase 2 of 8</span>
+            <span className="text-muted-foreground">Tasks</span>
           </div>
           <div
             className="mt-2 h-1 overflow-hidden rounded-full bg-border"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={8}
-            aria-valuenow={1}
+            aria-valuenow={2}
             aria-label="Implementation progress"
           >
-            <div className="h-full w-[12.5%] rounded-full bg-primary" />
+            <div className="h-full w-[25%] rounded-full bg-primary" />
           </div>
           <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-            Dashboard is live. Modules ship phase by phase.
+            Dashboard and tasks are live. Modules ship phase by phase.
           </p>
         </div>
 

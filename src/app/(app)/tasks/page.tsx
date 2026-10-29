@@ -1,68 +1,84 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import Link from "next/link";
 import {
   AlertTriangleIcon,
   CalendarClockIcon,
   CheckCircle2Icon,
+  HardDriveIcon,
   ListTodoIcon,
+  SearchXIcon,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
-import { PreviewNotice } from "@/components/preview-notice";
-import { TaskPriorityDot, TaskStatusBadge } from "@/components/tasks/task-badges";
-import { Badge } from "@/components/ui/badge";
+import { NewTaskButton } from "@/components/tasks/new-task-button";
+import { TaskFilters } from "@/components/tasks/task-filters";
+import { TaskItem } from "@/components/tasks/task-item";
+import { TaskStatusTabs } from "@/components/tasks/task-status-tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { isSameDay, startOfDay } from "@/lib/date";
-import { formatShortDate, formatTime } from "@/lib/format";
-import { getMockData } from "@/lib/mock-data";
-import type { TaskStatus } from "@/lib/types";
+import { getTaskCategories, listTasks } from "@/lib/tasks/repository";
+import {
+  buildTasksHref,
+  countTasks,
+  hasActiveFilters,
+  matchesTaskFilters,
+  matchesTaskStatus,
+  parseTaskQuery,
+  sortTasks,
+  type TaskSort,
+} from "@/lib/tasks/query";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "My Tasks",
 };
 
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  "in-progress": 0,
-  todo: 1,
-  completed: 2,
-  cancelled: 3,
+export const dynamic = "force-dynamic";
+
+const SORT_LABELS: Record<TaskSort, string> = {
+  due: "due date",
+  created: "newest first",
+  priority: "priority",
+  title: "title",
 };
 
 interface TasksPageProps {
-  searchParams: Promise<{
-    intent?: string;
-    highlight?: string;
-    q?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function TasksPreview({ searchParams }: TasksPageProps) {
+export default async function TasksPage({ searchParams }: TasksPageProps) {
   const params = await searchParams;
+  const query = parseTaskQuery(params);
+  const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent;
   const now = new Date();
-  const data = getMockData(now);
-  const activeStatuses = new Set(["todo", "in-progress"]);
 
-  const tasks = [...data.tasks].sort((a, b) => {
-    const statusDelta = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    if (statusDelta !== 0) return statusDelta;
-    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-  });
+  const [tasks, categories] = await Promise.all([
+    listTasks(),
+    getTaskCategories(),
+  ]);
 
-  const openCount = data.tasks.filter((task) =>
-    activeStatuses.has(task.status),
+  const matching = tasks.filter((task) => matchesTaskFilters(task, query));
+  const counts = countTasks(matching);
+  const visibleTasks = sortTasks(
+    matching.filter((task) => matchesTaskStatus(task, query)),
+    query.sort,
+  );
+
+  const openCount = tasks.filter(
+    (task) => task.status === "todo" || task.status === "in-progress",
   ).length;
-  const completedCount = data.tasks.filter(
+  const completedCount = tasks.filter(
     (task) => task.status === "completed",
   ).length;
-  const overdueCount = data.tasks.filter(
+  const overdueCount = tasks.filter(
     (task) =>
-      activeStatuses.has(task.status) &&
+      (task.status === "todo" || task.status === "in-progress") &&
       new Date(task.dueDate) < startOfDay(now),
   ).length;
-  const dueTodayCount = data.tasks.filter(
+  const dueTodayCount = tasks.filter(
     (task) =>
-      activeStatuses.has(task.status) &&
+      (task.status === "todo" || task.status === "in-progress") &&
       isSameDay(new Date(task.dueDate), now),
   ).length;
 
@@ -73,41 +89,43 @@ async function TasksPreview({ searchParams }: TasksPageProps) {
     { label: "Completed", value: completedCount, icon: CheckCircle2Icon },
   ];
 
+  const filtersActive = hasActiveFilters(query);
+  const cleanHref = buildTasksHref(query);
+
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Module preview · Phase 2"
+        eyebrow="Tasks · Phase 2"
         title="My Tasks"
-        description="A read-only look at the task records that will power the task manager. Creating, editing, filtering, and Kanban views arrive in Phase 2."
+        description="Create, edit, complete, and delete tasks. Every change is saved to a local file in this workspace and appears on the dashboard and in search."
         actions={
-          <Badge
-            variant="outline"
-            className="h-6 border-amber-500/25 bg-amber-500/5 px-2 text-[10px] text-amber-700 dark:text-amber-400"
-          >
-            Read-only preview
-          </Badge>
+          <NewTaskButton
+            categories={categories}
+            autoOpen={intent === "create"}
+            cleanHref={cleanHref}
+          />
         }
       />
 
-      {params.intent === "create" ? (
-        <div
-          role="status"
-          className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 text-[12px] leading-relaxed"
-        >
-          You selected <span className="font-medium">New task</span> from Quick
-          add. The task form, server validation, and persistence arrive in Phase
-          2. Nothing was saved.
-        </div>
-      ) : null}
+      <div className="flex items-start gap-2.5 rounded-xl border border-dashed border-amber-500/35 bg-amber-500/5 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted-foreground">
+        <HardDriveIcon
+          className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+          aria-hidden="true"
+        />
+        <p>
+          <span className="font-medium text-foreground">Saved on this machine.</span>{" "}
+          Tasks are written to{" "}
+          <code className="font-mono text-[10px]">.data/tasks.json</code>, which is
+          ignored by git. This is a single-user local file — not a database, and
+          not safe for production yet. Phase 3 moves tasks into PostgreSQL, and
+          you can restore the sample list from Settings.
+        </p>
+      </div>
 
-      <PreviewNotice>
-        These {data.tasks.length} sample records come from{" "}
-        <code className="font-mono text-[10px]">src/lib/mock-data.ts</code>. They
-        are not stored in a database and cannot be changed yet. Completed tasks
-        remain visible so you can inspect every status.
-      </PreviewNotice>
-
-      <section aria-label="Task summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section
+        aria-label="Task summary"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -117,9 +135,7 @@ async function TasksPreview({ searchParams }: TasksPageProps) {
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {stat.label}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">{stat.label}</p>
                   <p className="text-[18px] leading-tight font-semibold tabular-nums">
                     {stat.value}
                   </p>
@@ -131,98 +147,75 @@ async function TasksPreview({ searchParams }: TasksPageProps) {
       </section>
 
       <Card className="gap-0 py-0">
+        <CardContent className="p-3">
+          <TaskFilters query={query} categories={categories} />
+        </CardContent>
+      </Card>
+
+      <Card className="gap-0 py-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3.5">
           <div>
             <h2 className="text-[14px] font-semibold tracking-tight">
-              All tasks
+              {filtersActive ? "Filtered tasks" : "Your tasks"}
             </h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Sorted by status, then due date
+              {visibleTasks.length} shown of {tasks.length} · sorted by{" "}
+              {SORT_LABELS[query.sort]}
             </p>
           </div>
           <span className="text-[10px] text-muted-foreground">
-            {tasks.length} records
+            {counts.all} match current filters
           </span>
         </div>
 
-        <CardContent className="p-2">
-          <ul className="divide-y divide-border/60">
-            {tasks.map((task) => {
-              const highlighted = params.highlight === task.id;
-              const overdue =
-                activeStatuses.has(task.status) &&
-                new Date(task.dueDate) < startOfDay(now);
+        <div className="border-b border-border/70 px-3 py-2.5">
+          <TaskStatusTabs query={query} counts={counts} />
+        </div>
 
-              return (
-                <li
-                  key={task.id}
+        <CardContent className="p-2">
+          {visibleTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-4 py-12 text-center">
+              <span className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+                {tasks.length === 0 ? (
+                  <ListTodoIcon className="size-5" aria-hidden="true" />
+                ) : (
+                  <SearchXIcon className="size-5" aria-hidden="true" />
+                )}
+              </span>
+              <p className="text-[13px] font-medium">
+                {tasks.length === 0 ? "No tasks yet" : "No tasks match"}
+              </p>
+              <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+                {tasks.length === 0
+                  ? "Use the New task button above to add your first one. It will be saved to the local task file."
+                  : "Try a different search, priority, category, or status tab."}
+              </p>
+              {tasks.length === 0 ? null : (
+                <Link
+                  href="/tasks"
                   className={cn(
-                    "flex items-start gap-3 rounded-lg px-2.5 py-3",
-                    highlighted && "bg-primary/5 ring-1 ring-primary/20",
-                    task.status === "cancelled" && "opacity-55",
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "mt-1 h-8",
                   )}
                 >
-                  <span className="mt-1.5">
-                    <TaskPriorityDot priority={task.priority} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <p
-                        className={cn(
-                          "text-[13px] font-medium",
-                          task.status === "completed" &&
-                            "text-muted-foreground line-through decoration-muted-foreground/40",
-                        )}
-                      >
-                        {task.title}
-                      </p>
-                      {overdue ? (
-                        <span className="rounded-full bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-medium text-rose-700 dark:text-rose-400">
-                          Overdue
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 line-clamp-1 text-[10.5px] text-muted-foreground">
-                      {task.description}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
-                      <span className="font-medium text-foreground/70">
-                        {task.category}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>
-                        {formatShortDate(task.dueDate)} at{" "}
-                        {formatTime(task.dueDate)}
-                      </span>
-                      {task.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded bg-muted px-1.5 py-0.5 text-[9px]"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <TaskStatusBadge status={task.status} />
-                </li>
-              );
-            })}
-          </ul>
+                  Clear filters
+                </Link>
+              )}
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {visibleTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  categories={categories}
+                  now={now}
+                />
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function TasksPage(props: TasksPageProps) {
-  return (
-    <Suspense
-      fallback={
-        <div className="h-64 animate-pulse rounded-xl border bg-muted/30" />
-      }
-    >
-      <TasksPreview {...props} />
-    </Suspense>
   );
 }

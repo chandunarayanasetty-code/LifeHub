@@ -59,7 +59,7 @@ export function GlobalSearch({ items }: { items: SearchItem[] }) {
         open={open}
         onOpenChange={setOpen}
         title="Search LifeHub"
-        description="Search tasks and notes in the current preview workspace."
+        description="Search saved tasks and sample notes in this workspace."
       >
         <CommandInput placeholder="Search tasks and notes…" />
         <CommandList>

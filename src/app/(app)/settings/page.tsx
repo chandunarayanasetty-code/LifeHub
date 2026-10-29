@@ -3,6 +3,7 @@ import {
   BellIcon,
   CoinsIcon,
   Globe2Icon,
+  HardDriveIcon,
   LockKeyholeIcon,
   PaletteIcon,
   ShieldCheckIcon,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { ResetTasksButton } from "@/components/settings/reset-tasks-button";
 import { ThemeSelector } from "@/components/settings/theme-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,13 +53,13 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="Account & preferences"
         title="Settings"
-        description="Theme switching works today and persists in this browser. Profile edits, account preferences, security, and deletion arrive with authentication and database persistence."
+        description="Theme switching and local task storage work today. Profile edits, account preferences, security, and deletion arrive with authentication and database persistence."
         actions={
           <Badge
             variant="outline"
             className="h-6 border-emerald-500/25 bg-emerald-500/5 px-2 text-[10px] text-emerald-700 dark:text-emerald-400"
           >
-            Appearance is live
+            Appearance & tasks are live
           </Badge>
         }
       />
@@ -94,6 +96,61 @@ export default function SettingsPage() {
                 applied before the page paints. Syncing this preference to your
                 account arrives in Phase 6.
               </p>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 py-0">
+            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-8 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <HardDriveIcon className="size-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <h2 className="text-[14px] font-semibold tracking-tight">
+                    Task storage
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Where your tasks are saved in Phase 2
+                  </p>
+                </div>
+              </div>
+              <Badge
+                variant="outline"
+                className="h-5 border-emerald-500/25 bg-emerald-500/5 px-1.5 text-[9px] text-emerald-700 dark:text-emerald-400"
+              >
+                Live
+              </Badge>
+            </div>
+            <CardContent className="px-4 py-2">
+              <dl>
+                <SettingRow
+                  label="Storage"
+                  value=".data/tasks.json"
+                  hint="local JSON file"
+                />
+                <SettingRow
+                  label="Scope"
+                  value="Single local user"
+                  hint="no account yet"
+                />
+                <SettingRow
+                  label="Database"
+                  value="Not connected"
+                  hint="Phase 3"
+                />
+                <SettingRow
+                  label="Backups"
+                  value="None"
+                  hint="file is excluded from git"
+                />
+              </dl>
+              <p className="border-t py-2.5 text-[10.5px] leading-relaxed text-muted-foreground">
+                Tasks survive a server restart, but this file is not a database
+                and is not safe for multiple users or multiple app instances. It
+                is the honest intermediate step before Prisma and PostgreSQL
+                arrive in Phase 3.
+              </p>
+              <ResetTasksButton />
             </CardContent>
           </Card>
 
@@ -234,10 +291,10 @@ export default function SettingsPage() {
                   aria-hidden="true"
                 />
                 <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-                  Authentication is not connected yet. There is no password,
-                  session, or private record in this preview. Phase 4 adds
-                  registration, login, password recovery, and server-side
-                  ownership checks.
+                  Authentication is not connected yet. There is no password or
+                  session, and task data lives in one shared local file rather
+                  than per-user records. Phase 4 adds registration, login,
+                  password recovery, and server-side ownership checks.
                 </p>
               </div>
               <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-2">

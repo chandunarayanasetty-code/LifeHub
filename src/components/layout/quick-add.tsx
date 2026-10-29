@@ -27,6 +27,7 @@ const ACTIONS = [
     href: "/tasks",
     icon: ListPlusIcon,
     description: "Plan something to do",
+    available: true,
   },
   {
     label: "New note",
@@ -34,6 +35,7 @@ const ACTIONS = [
     href: "/notes",
     icon: NotebookPenIcon,
     description: "Capture a thought",
+    available: false,
   },
   {
     label: "Add expense",
@@ -41,6 +43,7 @@ const ACTIONS = [
     href: "/expenses",
     icon: WalletCardsIcon,
     description: "Track money out",
+    available: false,
   },
   {
     label: "New event",
@@ -48,6 +51,7 @@ const ACTIONS = [
     href: "/calendar",
     icon: CalendarPlusIcon,
     description: "Reserve time",
+    available: false,
   },
 ] as const;
 
@@ -89,14 +93,21 @@ export function QuickAdd() {
                 </span>
               </span>
               <span className="ml-auto text-[10px] text-muted-foreground">
-                P{action.phase}
+                {action.available ? (
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                    Live
+                  </span>
+                ) : (
+                  `P${action.phase}`
+                )}
               </span>
             </DropdownMenuItem>
           );
         })}
         <DropdownMenuSeparator />
         <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-          Creation forms arrive in their module phase. Nothing is saved yet.
+          Tasks save to this workspace. Other creation forms arrive in their
+          module phase.
         </p>
       </DropdownMenuContent>
     </DropdownMenu>

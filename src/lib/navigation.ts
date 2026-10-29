@@ -29,7 +29,7 @@ export const navSections: NavSection[] = [
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
-      { label: "My Tasks", href: "/tasks", icon: ListTodo, phase: 2 },
+      { label: "My Tasks", href: "/tasks", icon: ListTodo },
       { label: "Calendar", href: "/calendar", icon: CalendarDays, phase: 5 },
     ],
   },

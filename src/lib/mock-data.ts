@@ -16,11 +16,12 @@ import type {
 } from "@/lib/types";
 
 /**
- * PHASE 1 PREVIEW DATA — not real user data.
+ * SAMPLE AND SEED DATA — not real user data.
  *
- * Everything here is generated relative to the current date so the dashboard
- * remains useful whenever it is opened. Phase 3 replaces this module with
- * Prisma queries scoped to the signed-in user.
+ * The task records here are used once to seed `.data/tasks.json`; after that,
+ * task reads and writes go through `src/lib/tasks/repository.ts`. Everything
+ * else in this module remains generated preview data. Phase 3 replaces this
+ * module with Prisma queries scoped to the signed-in user.
  */
 
 export const demoUser = {

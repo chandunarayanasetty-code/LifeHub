@@ -29,6 +29,7 @@ import {
   getGreeting,
 } from "@/lib/format";
 import { demoUser, getMockData } from "@/lib/mock-data";
+import { listTasks } from "@/lib/tasks/repository";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -37,9 +38,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const now = new Date();
-  const data = getMockData(now);
+  // Tasks are the one module with real mutations, so read them from the task
+  // store instead of regenerating the sample list on every request.
+  const tasks = await listTasks();
+  const data = { ...getMockData(now), tasks };
   const snapshot = getDashboardSnapshot(data, now);
   const greeting = getGreeting(now);
 
@@ -71,10 +75,10 @@ export default function DashboardPage() {
             <Badge
               variant="outline"
               className="h-5 gap-1.5 border-amber-500/25 bg-amber-500/5 px-1.5 text-[9px] font-medium text-amber-700 dark:text-amber-400"
-              title="Generated dashboard records. No real account data yet."
+              title="Tasks are saved locally. Money, habits, goals, events, and notes remain generated sample data."
             >
               <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-              Preview data
+              Mixed data
             </Badge>
           </div>
 
@@ -84,7 +88,8 @@ export default function DashboardPage() {
           </h1>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
             Here is what needs your attention today — a calm view of your
-            tasks, money, habits, and goals.
+            tasks, money, habits, and goals. Tasks save locally; the other
+            modules still use sample data.
           </p>
         </div>
 
@@ -213,8 +218,9 @@ export default function DashboardPage() {
       </section>
 
       <footer className="pt-1 text-center text-[10px] text-muted-foreground">
-        LifeHub · One place for everything that matters. Preview data only — no
-        real financial or personal records are stored.
+        LifeHub · One place for everything that matters. Tasks are saved to a
+        local file in this workspace; money, habits, goals, events, and notes
+        remain generated sample data.
       </footer>
     </div>
   );
