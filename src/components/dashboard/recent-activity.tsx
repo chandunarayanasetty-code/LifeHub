@@ -61,12 +61,24 @@ export function RecentActivity({
             A lightweight audit trail of what changed
           </p>
         </div>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-          Preview
+        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+          Live
         </span>
       </div>
 
       <CardContent className="p-4">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <span className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground">
+              <NotebookPenIcon className="size-4.5" aria-hidden="true" />
+            </span>
+            <p className="text-[13px] font-medium">No activity yet</p>
+            <p className="max-w-[230px] text-[11px] leading-relaxed text-muted-foreground">
+              Completing a task, adding a transaction, checking in a habit, or
+              editing a note will show up here.
+            </p>
+          </div>
+        ) : (
         <ol className="relative space-y-4">
           {items.map((item, index) => {
             const style = ACTIVITY_STYLES[item.kind];
@@ -105,6 +117,7 @@ export function RecentActivity({
             );
           })}
         </ol>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,4 +1,4 @@
-import type { MockData } from "@/lib/mock-data";
+import type { Note, Task } from "@/lib/types";
 
 export interface SearchItem {
   id: string;
@@ -10,13 +10,13 @@ export interface SearchItem {
 }
 
 /**
- * Search index for the command palette. Phase 6 replaces this with a database
- * query that is always scoped to the signed-in user; the UI contract stays the
- * same. Tasks come from the local task store, notes from sample data.
+ * Search index for the command palette. Records come from the signed-in user's
+ * database rows — never from sample data.
  */
-export function buildSearchItems(
-  data: Pick<MockData, "tasks" | "notes">,
-): SearchItem[] {
+export function buildSearchItems(data: {
+  tasks: Task[];
+  notes: Note[];
+}): SearchItem[] {
   const tasks: SearchItem[] = data.tasks
     .filter((task) => task.status !== "cancelled")
     .slice(0, 12)

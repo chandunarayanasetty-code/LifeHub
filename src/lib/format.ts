@@ -2,7 +2,7 @@
  * Presentation formatters and small pure helpers.
  *
  * Keeping these functions free of React makes them straightforward to unit
- * test once Vitest is introduced in Phase 7.
+ * test with Vitest.
  */
 
 export const DEFAULT_LOCALE = "en-US";

@@ -95,8 +95,8 @@ export function ResetTasksButton() {
           <DialogHeader>
             <DialogTitle>Restore sample tasks?</DialogTitle>
             <DialogDescription>
-              This replaces the contents of the local task file with the
-              original Phase 1 sample tasks.
+              This replaces this demo workspace&apos;s tasks with the original
+              seeded sample list. Real accounts cannot use this action.
             </DialogDescription>
           </DialogHeader>
 

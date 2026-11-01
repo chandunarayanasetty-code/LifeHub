@@ -24,8 +24,11 @@
 .DS_Store
 *.pem
 
-# local task storage (Phase 2 stand-in for PostgreSQL)
+# local embedded database (PGlite) and Playwright/dev logs
 /.data/
+
+# Prisma client is generated from prisma/schema.prisma by `prisma generate`
+/src/generated/
 
 # debug
 npm-debug.log*
@@ -39,6 +42,12 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # typescript
 *.tsbuildinfo

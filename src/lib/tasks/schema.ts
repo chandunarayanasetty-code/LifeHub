@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { normalizeTags } from "@/lib/tags";
 import type { TaskPriority, TaskStatus } from "@/lib/types";
 
 /**
@@ -41,20 +42,13 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   critical: "Critical",
 };
 
-export function normalizeTags(raw: string): string[] {
-  const tags = raw
-    .split(",")
-    .map((tag) => tag.trim().replace(/^#/, "").replace(/\s+/g, " ").toLowerCase())
-    .filter(Boolean);
-
-  return [...new Set(tags)];
-}
+export { normalizeTags } from "@/lib/tags";
 
 function isValidDate(value: string): boolean {
   return !Number.isNaN(new Date(value).getTime());
 }
 
-/** Shape of a record as stored in the local JSON file. */
+/** Validation for a task row serialized by the server. */
 export const storedTaskSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1).max(160),

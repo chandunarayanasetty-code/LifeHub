@@ -1,12 +1,15 @@
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
-import { demoUser, getMockData } from "@/lib/mock-data";
+import { requireUser } from "@/lib/auth/session";
+import {
+  getUnreadNotificationCount,
+  syncNotifications,
+} from "@/lib/notifications/repository";
 import { buildSearchItems } from "@/lib/search";
-import { listTasks } from "@/lib/tasks/repository";
+import { getWorkspaceData } from "@/lib/workspace";
 
-// Preview data is generated relative to "today", so the shell renders per
-// request rather than being frozen at build time.
+// Dashboard data is relative to "today", so the shell renders per request.
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({
@@ -14,16 +17,30 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const data = getMockData();
-  const tasks = await listTasks();
-  const unreadCount = data.notifications.filter(
-    (notification) => !notification.read,
-  ).length;
-  const user = {
-    fullName: demoUser.fullName,
-    email: demoUser.email,
+  const user = await requireUser();
+
+  // Keep generated reminders current before rendering the unread badge.
+  try {
+    await syncNotifications(user.id);
+  } catch (error) {
+    console.error("[notifications] Reminder sync failed", error);
+  }
+
+  const [workspace, unreadCount] = await Promise.all([
+    getWorkspaceData(user.id),
+    getUnreadNotificationCount(user.id),
+  ]);
+
+  const searchItems = buildSearchItems({
+    tasks: workspace.tasks,
+    notes: workspace.notes,
+  });
+
+  const sidebarUser = {
+    fullName: user.name,
+    email: user.email,
+    isDemo: user.isDemo,
   };
-  const searchItems = buildSearchItems({ ...data, tasks });
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[268px_minmax(0,1fr)]">
@@ -34,13 +51,13 @@ export default async function AppLayout({
         Skip to content
       </a>
 
-      <AppSidebar unreadCount={unreadCount} user={user} />
+      <AppSidebar unreadCount={unreadCount} user={sidebarUser} />
 
       <div className="flex min-w-0 flex-col">
         <Topbar
           searchItems={searchItems}
           unreadCount={unreadCount}
-          user={user}
+          user={sidebarUser}
         />
         <main
           id="main-content"

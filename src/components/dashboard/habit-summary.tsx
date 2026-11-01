@@ -101,16 +101,31 @@ export function HabitSummary({
 
           <div className="min-w-0 flex-1">
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              You are{" "}
-              <span className="font-medium text-foreground">
-                {percent >= 80
-                  ? "well above"
-                  : percent >= 60
-                    ? "above"
-                    : "below"}{" "}
-                your 60% target
-              </span>{" "}
-              for the week. Small, repeatable actions compound.
+              {habits.length === 0 ? (
+                <>
+                  No habits are tracked yet.{" "}
+                  <Link
+                    href="/habits"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Add your first habit
+                  </Link>{" "}
+                  to start a streak.
+                </>
+              ) : (
+                <>
+                  You are{" "}
+                  <span className="font-medium text-foreground">
+                    {percent >= 80
+                      ? "well above"
+                      : percent >= 60
+                        ? "above"
+                        : "below"}{" "}
+                    your 60% target
+                  </span>{" "}
+                  for the week. Small, repeatable actions compound.
+                </>
+              )}
             </p>
             <p className="mt-2 text-[10px] text-muted-foreground">
               {habits.length} habits tracked · {formatPercent(rate, {
@@ -121,6 +136,7 @@ export function HabitSummary({
           </div>
         </div>
 
+        {habits.length === 0 ? null : (
         <ul className="mt-4 space-y-2.5">
           {habits.map((habit) => {
             const Icon = HABIT_ICONS[habit.icon];
@@ -159,6 +175,7 @@ export function HabitSummary({
             );
           })}
         </ul>
+        )}
       </CardContent>
     </Card>
   );

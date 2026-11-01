@@ -8,18 +8,33 @@ import {
   toDateKey,
 } from "@/lib/date";
 import { clampPercent } from "@/lib/format";
-import type { MockData } from "@/lib/mock-data";
 import type {
   CashflowPoint,
+  CalendarEvent,
   DashboardSnapshot,
+  FinancialTransaction,
+  Goal,
+  Habit,
   Task,
   WeeklyProductivityPoint,
 } from "@/lib/types";
 
+/**
+ * Input to the dashboard calculations. Real database rows for the signed-in
+ * account are passed in; there are no defaults and no sample fallbacks.
+ */
+export interface DashboardInput {
+  tasks: Task[];
+  events: CalendarEvent[];
+  transactions: FinancialTransaction[];
+  habits: Habit[];
+  goals: Goal[];
+}
+
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 
 function sumCents(
-  transactions: MockData["transactions"],
+  transactions: DashboardInput["transactions"],
   type: "income" | "expense",
 ): number {
   return transactions
@@ -48,7 +63,7 @@ function buildWeeklyProductivity(
 }
 
 function buildCashflow(
-  transactions: MockData["transactions"],
+  transactions: DashboardInput["transactions"],
   now: Date,
 ): CashflowPoint[] {
   const monthLabel = new Intl.DateTimeFormat("en-US", { month: "short" });
@@ -74,7 +89,7 @@ function buildCashflow(
 }
 
 export function getDashboardSnapshot(
-  data: MockData,
+  data: DashboardInput,
   now = new Date(),
 ): DashboardSnapshot {
   const today = startOfDay(now);

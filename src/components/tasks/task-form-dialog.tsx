@@ -121,8 +121,8 @@ function TaskForm({
         <DialogTitle>{task ? "Edit task" : "New task"}</DialogTitle>
         <DialogDescription>
           {task
-            ? "Update the details below. Changes are saved to this workspace's local task file."
-            : "Add a task to your list. It will be saved to this workspace's local task file."}
+            ? "Update the details below. Changes are saved to your LifeHub account."
+            : "Add a task to your list. It is saved to your LifeHub account."}
         </DialogDescription>
       </DialogHeader>
 

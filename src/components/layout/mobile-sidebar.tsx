@@ -55,7 +55,7 @@ export function MobileSidebar({ unreadCount, user }: MobileSidebarProps) {
         <SheetHeader className="flex-row items-center justify-between border-b border-sidebar-border px-4 py-3.5">
           <SheetTitle className="sr-only">LifeHub navigation</SheetTitle>
           <SheetDescription className="sr-only">
-            Primary navigation for the LifeHub preview.
+            Primary navigation for your LifeHub workspace.
           </SheetDescription>
           <Brand />
           <Button
@@ -105,10 +105,6 @@ export function MobileSidebar({ unreadCount, user }: MobileSidebarProps) {
                         {item.href === "/notifications" && unreadCount > 0 ? (
                           <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
                             {unreadCount}
-                          </span>
-                        ) : item.phase ? (
-                          <span className="ml-auto text-[10px] text-muted-foreground">
-                            P{item.phase}
                           </span>
                         ) : null}
                       </Link>

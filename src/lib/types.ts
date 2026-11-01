@@ -1,9 +1,9 @@
 /**
  * Shared domain types.
  *
- * These mirror the shapes we expect to store in PostgreSQL later. Phase 1
- * uses in-memory mock records with the same field names so the UI does not
- * need to change when Prisma models arrive in Phase 3.
+ * These are the shapes the UI consumes. Repositories map Prisma rows into
+ * them (`src/lib/db/mappers.ts`), so pages never depend on database columns
+ * directly and the two layers can evolve separately.
  */
 
 export type TaskStatus = "todo" | "in-progress" | "completed" | "cancelled";

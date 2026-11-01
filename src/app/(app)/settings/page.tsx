@@ -1,27 +1,34 @@
 import type { Metadata } from "next";
 import {
   BellIcon,
-  CoinsIcon,
+  DatabaseIcon,
   Globe2Icon,
-  HardDriveIcon,
-  LockKeyholeIcon,
+  LogOutIcon,
   PaletteIcon,
+  RotateCcwIcon,
   ShieldCheckIcon,
   Trash2Icon,
   UserRoundIcon,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { ChangePasswordForm } from "@/components/settings/change-password-form";
+import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
+import { ProfileForm } from "@/components/settings/profile-form";
 import { ResetTasksButton } from "@/components/settings/reset-tasks-button";
 import { ThemeSelector } from "@/components/settings/theme-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { demoUser } from "@/lib/mock-data";
+import { requireUser } from "@/lib/auth/session";
+import { signOutEverywhereAction } from "@/lib/settings/actions";
+import { getWorkspaceData } from "@/lib/workspace";
 
 export const metadata: Metadata = {
   title: "Settings",
 };
+
+export const dynamic = "force-dynamic";
 
 function SettingRow({
   label,
@@ -47,37 +54,50 @@ function SettingRow({
   );
 }
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireUser();
+  const data = await getWorkspaceData(user.id);
+
+  const counts = [
+    { label: "Tasks", value: data.tasks.length },
+    { label: "Events", value: data.events.length },
+    { label: "Transactions", value: data.transactions.length },
+    { label: "Habits", value: data.habits.length },
+    { label: "Notes", value: data.notes.length },
+    { label: "Goals", value: data.goals.length },
+  ];
+
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow="Account & preferences"
         title="Settings"
-        description="Theme switching and local task storage work today. Profile edits, account preferences, security, and deletion arrive with authentication and database persistence."
+        description="Manage your account, password, appearance, and regional preferences. Everything here is stored in your account and scoped to you."
         actions={
           <Badge
             variant="outline"
-            className="h-6 border-emerald-500/25 bg-emerald-500/5 px-2 text-[10px] text-emerald-700 dark:text-emerald-400"
+            className="h-6 gap-1.5 border-emerald-500/25 bg-emerald-500/5 px-2 text-[10px] text-emerald-700 dark:text-emerald-400"
           >
-            Appearance & tasks are live
+            <ShieldCheckIcon className="size-3" aria-hidden="true" />
+            {user.isDemo ? "Demo account" : "Signed in"}
           </Badge>
         }
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <Card className="gap-0 py-0">
+          <Card className="gap-0 py-0" id="account">
             <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
               <div className="flex items-center gap-2.5">
                 <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <PaletteIcon className="size-4" aria-hidden="true" />
+                  <UserRoundIcon className="size-4" aria-hidden="true" />
                 </span>
                 <div>
                   <h2 className="text-[14px] font-semibold tracking-tight">
-                    Appearance
+                    Account
                   </h2>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Light, dark, or follow your device
+                    {user.email}
                   </p>
                 </div>
               </div>
@@ -89,28 +109,30 @@ export default function SettingsPage() {
               </Badge>
             </div>
             <CardContent className="p-4">
-              <ThemeSelector />
-              <p className="mt-3 text-[10.5px] leading-relaxed text-muted-foreground">
-                Your choice is stored locally by{" "}
-                <code className="font-mono text-[10px]">next-themes</code> and
-                applied before the page paints. Syncing this preference to your
-                account arrives in Phase 6.
-              </p>
+              <ProfileForm
+                user={{
+                  name: user.name,
+                  email: user.email,
+                  currency: user.currency,
+                  timezone: user.timezone,
+                  weekStartsOn: user.weekStartsOn,
+                }}
+              />
             </CardContent>
           </Card>
 
           <Card className="gap-0 py-0">
             <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="grid size-8 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <HardDriveIcon className="size-4" aria-hidden="true" />
+                <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
+                  <ShieldCheckIcon className="size-4" aria-hidden="true" />
                 </span>
                 <div>
                   <h2 className="text-[14px] font-semibold tracking-tight">
-                    Task storage
+                    Security
                   </h2>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Where your tasks are saved in Phase 2
+                    Password and sessions
                   </p>
                 </div>
               </div>
@@ -118,109 +140,99 @@ export default function SettingsPage() {
                 variant="outline"
                 className="h-5 border-emerald-500/25 bg-emerald-500/5 px-1.5 text-[9px] text-emerald-700 dark:text-emerald-400"
               >
-                Live
+                scrypt
+              </Badge>
+            </div>
+            <CardContent className="p-4">
+              <ChangePasswordForm />
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                <p className="max-w-[300px] text-[10px] leading-relaxed text-muted-foreground">
+                  Sessions are stored server-side with hashed tokens and expire
+                  after 30 days.
+                </p>
+                <form action={signOutEverywhereAction}>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                  >
+                    <LogOutIcon className="size-3.5" aria-hidden="true" />
+                    Sign out everywhere
+                  </Button>
+                </form>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 py-0">
+            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-8 place-items-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                  <DatabaseIcon className="size-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <h2 className="text-[14px] font-semibold tracking-tight">
+                    Data & storage
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    What belongs to this account
+                  </p>
+                </div>
+              </div>
+              <Badge
+                variant="outline"
+                className="h-5 border-emerald-500/25 bg-emerald-500/5 px-1.5 text-[9px] text-emerald-700 dark:text-emerald-400"
+              >
+                PostgreSQL
               </Badge>
             </div>
             <CardContent className="px-4 py-2">
+              <div className="grid grid-cols-3 gap-2 py-2 sm:grid-cols-6">
+                {counts.map((count) => (
+                  <div
+                    key={count.label}
+                    className="rounded-lg border bg-muted/25 px-2 py-2 text-center"
+                  >
+                    <p className="text-[17px] leading-tight font-semibold tabular-nums">
+                      {count.value}
+                    </p>
+                    <p className="text-[9.5px] text-muted-foreground">
+                      {count.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
               <dl>
-                <SettingRow
-                  label="Storage"
-                  value=".data/tasks.json"
-                  hint="local JSON file"
-                />
-                <SettingRow
-                  label="Scope"
-                  value="Single local user"
-                  hint="no account yet"
-                />
                 <SettingRow
                   label="Database"
-                  value="Not connected"
-                  hint="Phase 3"
+                  value="PostgreSQL via Prisma"
+                  hint="driver adapter"
                 />
-                <SettingRow
-                  label="Backups"
-                  value="None"
-                  hint="file is excluded from git"
-                />
-              </dl>
-              <p className="border-t py-2.5 text-[10.5px] leading-relaxed text-muted-foreground">
-                Tasks survive a server restart, but this file is not a database
-                and is not safe for multiple users or multiple app instances. It
-                is the honest intermediate step before Prisma and PostgreSQL
-                arrive in Phase 3.
-              </p>
-              <ResetTasksButton />
-            </CardContent>
-          </Card>
-
-          <Card className="gap-0 py-0">
-            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-                  <UserRoundIcon className="size-4" aria-hidden="true" />
-                </span>
-                <div>
-                  <h2 className="text-[14px] font-semibold tracking-tight">
-                    Profile
-                  </h2>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Preview account details
-                  </p>
-                </div>
-              </div>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[9px]">
-                Editing · Phase 4
-              </Badge>
-            </div>
-            <CardContent className="px-4 py-2">
-              <dl>
-                <SettingRow label="Display name" value={demoUser.fullName} />
-                <SettingRow label="Email" value={demoUser.email} />
-                <SettingRow label="Workspace" value={demoUser.workspace} />
-                <SettingRow
-                  label="Account status"
-                  value="Preview only"
-                  hint="no database record"
-                />
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card className="gap-0 py-0">
-            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-                  <Globe2Icon className="size-4" aria-hidden="true" />
-                </span>
-                <div>
-                  <h2 className="text-[14px] font-semibold tracking-tight">
-                    Regional preferences
-                  </h2>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Currency, timezone, and date display
-                  </p>
-                </div>
-              </div>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[9px]">
-                Saving · Phase 6
-              </Badge>
-            </div>
-            <CardContent className="px-4 py-2">
-              <dl>
+                <SettingRow label="Scope" value="This account only" />
                 <SettingRow
                   label="Currency"
-                  value="US Dollar"
-                  hint="USD"
+                  value={user.currency}
+                  hint="stored as integer cents"
                 />
-                <SettingRow label="Timezone" value={demoUser.timezone} />
-                <SettingRow label="Date format" value="MMM d, yyyy" />
-                <SettingRow label="Week starts" value="Monday" />
+                <SettingRow label="Timezone" value={user.timezone} />
               </dl>
-              <p className="border-t py-2.5 text-[10.5px] leading-relaxed text-muted-foreground">
-                Money is stored as integer minor units (cents) so calculations
-                never rely on floating point.
-              </p>
+
+              {user.isDemo ? (
+                <div className="border-t py-3">
+                  <p className="text-[10.5px] leading-relaxed text-muted-foreground">
+                    This demo account is seeded with generated sample data. You
+                    can restore the original sample task list at any time.
+                  </p>
+                  <ResetTasksButton />
+                </div>
+              ) : (
+                <p className="border-t py-2.5 text-[10.5px] leading-relaxed text-muted-foreground">
+                  Your workspace contains only records you created. Sample data is
+                  never mixed into a real account.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -228,81 +240,59 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <Card className="gap-0 py-0">
             <div className="flex items-center gap-2.5 border-b border-border/70 px-4 py-3.5">
-              <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-                <BellIcon className="size-4" aria-hidden="true" />
+              <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                <PaletteIcon className="size-4" aria-hidden="true" />
               </span>
               <div>
                 <h2 className="text-[14px] font-semibold tracking-tight">
-                  Notifications
+                  Appearance
                 </h2>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Delivery preferences
+                  Light, dark, or follow your device
                 </p>
               </div>
             </div>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
-                <div>
-                  <p className="text-[11.5px] font-medium">In-app reminders</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Preview only
-                  </p>
-                </div>
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-400">
-                  Phase 6
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
-                <div>
-                  <p className="text-[11.5px] font-medium">Email delivery</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    No provider configured
-                  </p>
-                </div>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
-                  Off
-                </span>
-              </div>
-              <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-                LifeHub will not claim email delivery works until a scheduled
-                job and provider are configured and tested.
+              <ThemeSelector />
+              <p className="mt-3 text-[10.5px] leading-relaxed text-muted-foreground">
+                Your theme is stored on this device by{" "}
+                <code className="font-mono text-[10px]">next-themes</code> so it
+                applies before the page paints. It is intentionally not tied to
+                your account.
               </p>
             </CardContent>
           </Card>
 
           <Card className="gap-0 py-0">
             <div className="flex items-center gap-2.5 border-b border-border/70 px-4 py-3.5">
-              <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-                <ShieldCheckIcon className="size-4" aria-hidden="true" />
+              <span className="grid size-8 place-items-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                <Globe2Icon className="size-4" aria-hidden="true" />
               </span>
               <div>
                 <h2 className="text-[14px] font-semibold tracking-tight">
-                  Security
+                  Reports & reminders
                 </h2>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Account protection
+                  How your data is summarised
                 </p>
               </div>
             </div>
             <CardContent className="p-4">
-              <div className="flex items-start gap-2.5 rounded-lg border border-dashed bg-muted/25 px-3 py-2.5">
-                <LockKeyholeIcon
-                  className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-                  Authentication is not connected yet. There is no password or
-                  session, and task data lives in one shared local file rather
-                  than per-user records. Phase 4 adds registration, login,
-                  password recovery, and server-side ownership checks.
-                </p>
-              </div>
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-2">
-                <CoinsIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                <p className="text-[10px] text-muted-foreground">
-                  No real financial data is stored.
-                </p>
-              </div>
+              <ul className="space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <BellIcon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                  In-app reminders are generated from your own due tasks, events,
+                  and goals.
+                </li>
+                <li className="flex items-start gap-2">
+                  <RotateCcwIcon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                  Reports are computed from saved records, not sample figures.
+                </li>
+                <li className="flex items-start gap-2">
+                  <Globe2Icon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                  Email delivery is not connected. Nothing claims to send email.
+                </li>
+              </ul>
             </CardContent>
           </Card>
 
@@ -322,20 +312,10 @@ export default function SettingsPage() {
             </div>
             <CardContent className="p-4">
               <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-                Account deletion becomes available after authentication and
-                data persistence are implemented. It will require password
-                confirmation and a clear explanation of what is removed.
+                Deleting your account removes every record that belongs to it.
+                Password confirmation is required, and there is no recovery.
               </p>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled
-                className="mt-3 h-8 gap-1.5"
-              >
-                <Trash2Icon className="size-3.5" aria-hidden="true" />
-                Delete account
-                <span className="ml-1 text-[9px] opacity-70">Phase 4</span>
-              </Button>
+              <DeleteAccountDialog />
             </CardContent>
           </Card>
         </div>

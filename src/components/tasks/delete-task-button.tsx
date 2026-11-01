@@ -100,7 +100,7 @@ export function DeleteTaskButton({ task }: { task: Task }) {
           <DialogHeader>
             <DialogTitle>Delete task?</DialogTitle>
             <DialogDescription>
-              This removes the task from the local task file. It cannot be
+              This removes the task from your account permanently. It cannot be
               undone.
             </DialogDescription>
           </DialogHeader>

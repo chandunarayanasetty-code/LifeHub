@@ -1,9 +1,9 @@
 /**
  * Small, timezone-aware date helpers.
  *
- * We deliberately avoid heavy date libraries in Phase 1. All helpers operate
- * on the server's local time and return either Date objects or "YYYY-MM-DD"
- * keys, which keeps comparisons stable across daylight-saving changes.
+ * We deliberately avoid heavy date libraries. All helpers operate on the
+ * server's local time and return either Date objects or "YYYY-MM-DD" keys,
+ * which keeps comparisons stable across daylight-saving changes.
  */
 
 export function startOfDay(value: Date): Date {

@@ -1,8 +1,10 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   BellIcon,
+  LoaderCircleIcon,
   LogOutIcon,
   SettingsIcon,
   UserRoundIcon,
@@ -19,18 +21,27 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { logoutAction } from "@/lib/auth/actions";
 import { getInitials } from "@/lib/format";
 
 interface UserMenuProps {
   user: {
     fullName: string;
     email: string;
+    isDemo?: boolean;
   };
   unreadCount: number;
 }
 
 export function UserMenu({ user, unreadCount }: UserMenuProps) {
   const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+
+  function signOut() {
+    startTransition(() => {
+      void logoutAction();
+    });
+  }
 
   return (
     <DropdownMenu>
@@ -50,7 +61,7 @@ export function UserMenu({ user, unreadCount }: UserMenuProps) {
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="flex items-center gap-2.5 py-2">
           <Avatar className="size-8">
             <AvatarFallback className="bg-primary/10 text-[11px] font-semibold text-primary">
@@ -68,11 +79,11 @@ export function UserMenu({ user, unreadCount }: UserMenuProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => router.push("/settings")}
+          onClick={() => router.push("/settings#account")}
           className="gap-2"
         >
           <UserRoundIcon className="size-4" />
-          Profile
+          Account
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => router.push("/settings")}
@@ -92,14 +103,23 @@ export function UserMenu({ user, unreadCount }: UserMenuProps) {
           ) : null}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled className="gap-2">
-          <LogOutIcon className="size-4" />
-          Sign out
-          <DropdownMenuShortcut>Phase 4</DropdownMenuShortcut>
+        <DropdownMenuItem
+          onClick={signOut}
+          disabled={isPending}
+          className="gap-2"
+        >
+          {isPending ? (
+            <LoaderCircleIcon className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <LogOutIcon className="size-4" aria-hidden="true" />
+          )}
+          {isPending ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
-        <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-          Authentication is not connected yet. This is a preview account.
-        </p>
+        {user.isDemo ? (
+          <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+            Demo workspace with clearly labelled sample records.
+          </p>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

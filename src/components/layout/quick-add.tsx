@@ -4,9 +4,11 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlusIcon,
+  FlameIcon,
   ListPlusIcon,
   NotebookPenIcon,
   PlusIcon,
+  TargetIcon,
   WalletCardsIcon,
 } from "lucide-react";
 
@@ -23,35 +25,39 @@ import {
 const ACTIONS = [
   {
     label: "New task",
-    phase: 2,
     href: "/tasks",
     icon: ListPlusIcon,
     description: "Plan something to do",
-    available: true,
-  },
-  {
-    label: "New note",
-    phase: 5,
-    href: "/notes",
-    icon: NotebookPenIcon,
-    description: "Capture a thought",
-    available: false,
-  },
-  {
-    label: "Add expense",
-    phase: 5,
-    href: "/expenses",
-    icon: WalletCardsIcon,
-    description: "Track money out",
-    available: false,
   },
   {
     label: "New event",
-    phase: 5,
     href: "/calendar",
     icon: CalendarPlusIcon,
     description: "Reserve time",
-    available: false,
+  },
+  {
+    label: "Add transaction",
+    href: "/expenses",
+    icon: WalletCardsIcon,
+    description: "Track money in or out",
+  },
+  {
+    label: "New habit",
+    href: "/habits",
+    icon: FlameIcon,
+    description: "Start a routine",
+  },
+  {
+    label: "New note",
+    href: "/notes",
+    icon: NotebookPenIcon,
+    description: "Capture a thought",
+  },
+  {
+    label: "New goal",
+    href: "/goals",
+    icon: TargetIcon,
+    description: "Set a measurable target",
   },
 ] as const;
 
@@ -72,7 +78,7 @@ export function QuickAdd() {
         <PlusIcon className="size-4" />
         <span className="hidden sm:inline">Quick add</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Create new</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ACTIONS.map((action) => {
@@ -92,22 +98,12 @@ export function QuickAdd() {
                   {action.description}
                 </span>
               </span>
-              <span className="ml-auto text-[10px] text-muted-foreground">
-                {action.available ? (
-                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                    Live
-                  </span>
-                ) : (
-                  `P${action.phase}`
-                )}
-              </span>
             </DropdownMenuItem>
           );
         })}
         <DropdownMenuSeparator />
         <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-          Tasks save to this workspace. Other creation forms arrive in their
-          module phase.
+          Every item you create is saved to your own account.
         </p>
       </DropdownMenuContent>
     </DropdownMenu>

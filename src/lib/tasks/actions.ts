@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ZodError } from "zod";
 
 import type { TaskStatus } from "@/lib/types";
+import { requireUser } from "@/lib/auth/session";
+import { readField, toFieldErrors } from "@/lib/form-utils";
 
 import type { TaskActionState } from "./action-types";
 import {
@@ -18,41 +19,23 @@ import { taskFormSchema, taskStatusSchema, type TaskFormValues } from "./schema"
 /**
  * Server actions for every task mutation.
  *
- * The browser can be bypassed, so each action re-validates its input and
- * returns a serialisable state object for `useActionState` instead of throwing
- * raw errors at the user.
+ * The browser can be bypassed, so each action authenticates the caller,
+ * re-validates its input, and scopes the write to that user. Errors are returned
+ * as serialisable state for `useActionState` instead of throwing raw errors.
  */
 
 function revalidateTaskViews() {
   revalidatePath("/tasks");
   revalidatePath("/");
-}
-
-function readField(formData: FormData, name: string): string {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : "";
-}
-
-function toFieldErrors(
-  error: ZodError,
-): Partial<Record<keyof TaskFormValues, string[]>> {
-  const fieldErrors: Partial<Record<keyof TaskFormValues, string[]>> = {};
-
-  for (const issue of error.issues) {
-    const key = issue.path[0];
-    if (typeof key !== "string") continue;
-
-    const field = key as keyof TaskFormValues;
-    fieldErrors[field] = [...(fieldErrors[field] ?? []), issue.message];
-  }
-
-  return fieldErrors;
+  revalidatePath("/reports");
 }
 
 export async function saveTaskAction(
   _previousState: TaskActionState,
   formData: FormData,
 ): Promise<TaskActionState> {
+  const user = await requireUser();
+
   const parsed = taskFormSchema.safeParse({
     title: readField(formData, "title"),
     description: readField(formData, "description"),
@@ -67,7 +50,7 @@ export async function saveTaskAction(
     return {
       status: "error",
       message: "Check the highlighted fields and try again.",
-      fieldErrors: toFieldErrors(parsed.error),
+      fieldErrors: toFieldErrors<keyof TaskFormValues>(parsed.error),
     };
   }
 
@@ -75,7 +58,7 @@ export async function saveTaskAction(
 
   try {
     if (id) {
-      const updated = await updateTask(id, parsed.data);
+      const updated = await updateTask(user.id, id, parsed.data);
       if (!updated) {
         return {
           status: "error",
@@ -83,7 +66,7 @@ export async function saveTaskAction(
         };
       }
     } else {
-      await createTask(parsed.data);
+      await createTask(user.id, parsed.data);
     }
   } catch (error) {
     console.error("[tasks] Failed to save task", error);
@@ -106,6 +89,7 @@ export async function deleteTaskAction(
   _previousState: TaskActionState,
   formData: FormData,
 ): Promise<TaskActionState> {
+  const user = await requireUser();
   const id = readField(formData, "id").trim();
 
   if (!id) {
@@ -113,7 +97,7 @@ export async function deleteTaskAction(
   }
 
   try {
-    const removed = await removeTask(id);
+    const removed = await removeTask(user.id, id);
     if (!removed) {
       return {
         status: "error",
@@ -140,8 +124,10 @@ export async function setTaskStatusAction(
   const parsedStatus = taskStatusSchema.safeParse(status);
   if (!id || !parsedStatus.success) return;
 
+  const user = await requireUser();
+
   try {
-    const updated = await setTaskStatus(id, parsedStatus.data);
+    const updated = await setTaskStatus(user.id, id, parsedStatus.data);
     if (!updated) return;
   } catch (error) {
     console.error("[tasks] Failed to change task status", error);
@@ -158,13 +144,22 @@ export async function resetTasksAction(
   void _previousState;
   void _formData;
 
-  try {
-    await resetTasks();
-  } catch (error) {
-    console.error("[tasks] Failed to reset task data", error);
+  const user = await requireUser();
+  if (!user.isDemo) {
     return {
       status: "error",
-      message: "The task file could not be reset. Check the server log.",
+      message:
+        "Sample data can only be restored in the demo workspace. Your account keeps its real records.",
+    };
+  }
+
+  try {
+    await resetTasks(user.id);
+  } catch (error) {
+    console.error("[tasks] Failed to reset sample tasks", error);
+    return {
+      status: "error",
+      message: "The sample tasks could not be restored. Check the server log.",
     };
   }
 

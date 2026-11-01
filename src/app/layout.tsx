@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Instrument_Serif } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { HydrationMarker } from "@/components/hydration-marker";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={cn("font-sans", geist.variable, instrumentSerif.variable)}
     >
       <body>
@@ -67,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           disableTransitionOnChange
         >
           <TooltipProvider>{children}</TooltipProvider>
+          <HydrationMarker />
         </ThemeProvider>
       </body>
     </html>

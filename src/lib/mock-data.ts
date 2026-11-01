@@ -18,10 +18,10 @@ import type {
 /**
  * SAMPLE AND SEED DATA — not real user data.
  *
- * The task records here are used once to seed `.data/tasks.json`; after that,
- * task reads and writes go through `src/lib/tasks/repository.ts`. Everything
- * else in this module remains generated preview data. Phase 3 replaces this
- * module with Prisma queries scoped to the signed-in user.
+ * `getMockData()` generates the records inserted into the demo account by
+ * `src/lib/db/seed.ts`. It is never read at request time: every page queries
+ * PostgreSQL through the repositories, scoped to the signed-in user. The demo
+ * account is marked `isDemo` and clearly labelled in the UI.
  */
 
 export const demoUser = {
@@ -114,7 +114,7 @@ function buildTasks(now: Date): Task[] {
       id: "task-05",
       title: "Draft LifeHub project brief",
       description:
-        "Capture the problem statement, target user, and Phase 1 scope.",
+        "Capture the problem statement, target user, and launch scope.",
       status: "in-progress",
       priority: "medium",
       category: "Projects",
@@ -157,8 +157,7 @@ function buildTasks(now: Date): Task[] {
     },
   ];
 
-  // Additional completed records give the charts realistic shape. In Phase 3
-  // these come from the database instead of this generated list.
+  // Additional completed records give the seeded charts a realistic shape.
   const completedTitles = [
     ["Submit expense report", "Work"],
     ["Morning stretching routine", "Health"],

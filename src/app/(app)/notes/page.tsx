@@ -1,134 +1,192 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { NotebookPenIcon, PinIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  FilterXIcon,
+  NotebookPenIcon,
+  PinIcon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react";
 
+import {
+  DeleteNoteButton,
+  EditNoteButton,
+  NewNoteButton,
+  PinNoteButton,
+} from "@/components/notes/note-buttons";
 import { PageHeader } from "@/components/page-header";
-import { PreviewNotice } from "@/components/preview-notice";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { requireUser } from "@/lib/auth/session";
 import { formatRelativeTime } from "@/lib/format";
-import { getMockData } from "@/lib/mock-data";
+import { listNoteDocuments } from "@/lib/notes/repository";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Notes",
 };
 
+export const dynamic = "force-dynamic";
+
 interface NotesPageProps {
-  searchParams: Promise<{
-    intent?: string;
-    highlight?: string;
-    q?: string;
-  }>;
+  searchParams: Promise<{ intent?: string; q?: string }>;
 }
 
-async function NotesPreview({ searchParams }: NotesPageProps) {
+export default async function NotesPage({ searchParams }: NotesPageProps) {
+  const user = await requireUser();
   const params = await searchParams;
   const now = new Date();
-  const data = getMockData(now);
-  const notes = [...data.notes].sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-  });
-  const pinnedCount = notes.filter((note) => note.pinned).length;
+  const query = (params.q ?? "").trim().slice(0, 120);
+
+  const documents = await listNoteDocuments(user.id);
+  const pinnedCount = documents.filter((doc) => doc.pinned).length;
+
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const notes =
+    terms.length === 0
+      ? documents
+      : documents.filter((note) => {
+          const haystack = `${note.title} ${note.content} ${note.tags.join(" ")}`.toLowerCase();
+          return terms.every((term) => haystack.includes(term));
+        });
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Module preview · Phase 5"
+        eyebrow="Notes"
         title="Notes"
-        description="A read-only view of a small note library. The editor, tags, pinning, archive, and search persistence arrive with the Notes module."
-        actions={
-          <Badge
-            variant="outline"
-            className="h-6 border-amber-500/25 bg-amber-500/5 px-2 text-[10px] text-amber-700 dark:text-amber-400"
-          >
-            Read-only preview
-          </Badge>
-        }
+        description="A small, searchable note library with tags and pinning. Notes are plain text and private to your account."
+        actions={<NewNoteButton autoOpen={params.intent === "create"} />}
       />
 
-      {params.intent === "create" ? (
-        <div
-          role="status"
-          className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 text-[12px] leading-relaxed"
-        >
-          You selected <span className="font-medium">New note</span> from Quick
-          add. The note editor and persistence arrive in Phase 5. Nothing was
-          saved.
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <form action="/notes" method="get" className="flex items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <SearchIcon
+              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              name="q"
+              defaultValue={query}
+              placeholder="Search titles, tags, or content"
+              aria-label="Search notes"
+              maxLength={120}
+              className="h-8 pl-8"
+            />
+          </div>
+          <Button type="submit" variant="outline" size="sm" className="h-8">
+            Search
+          </Button>
+          {query ? (
+            <Link
+              href="/notes"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <FilterXIcon className="size-3.5" aria-hidden="true" />
+              Clear
+            </Link>
+          ) : null}
+        </form>
 
-      <PreviewNotice>
-        {notes.length} sample notes, {pinnedCount} pinned. Notes are owner-only
-        once authentication lands in Phase 4; today this is generated preview
-        content with no private data.
-      </PreviewNotice>
+        <Badge variant="outline" className="h-6 w-fit gap-1.5 px-2 text-[10px]">
+          <PinIcon className="size-3" aria-hidden="true" />
+          {pinnedCount} pinned · {documents.length} total
+        </Badge>
+      </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {notes.map((note) => {
-          const highlighted = params.highlight === note.id;
-          return (
+      {notes.length === 0 ? (
+        <Card className="gap-0 py-0">
+          <CardContent className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
+            <span className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+              <NotebookPenIcon className="size-5" aria-hidden="true" />
+            </span>
+            <p className="text-[14px] font-medium">
+              {query ? "No matching notes" : "No notes yet"}
+            </p>
+            <p className="max-w-[320px] text-[11.5px] leading-relaxed text-muted-foreground">
+              {query
+                ? "Try a different word, or clear the search to see every note."
+                : "Capture an idea, a meeting, or a weekly review. Pinned notes stay at the top."}
+            </p>
+            <Link
+              href="/notes?intent=create"
+              className="mt-1 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-primary hover:underline"
+            >
+              <PlusIcon className="size-3.5" aria-hidden="true" />
+              Write your first note
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {notes.map((note) => (
             <Card
               key={note.id}
               className={cn(
-                "gap-0 py-0 transition-shadow hover:shadow-sm",
-                highlighted && "ring-2 ring-primary/30",
+                "group gap-0 py-0 transition-shadow hover:shadow-sm",
+                note.pinned && "ring-primary/20",
               )}
             >
               <CardContent className="flex h-full flex-col p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                    <span
+                      className={cn(
+                        "mt-0.5 grid size-7 shrink-0 place-items-center rounded-md",
+                        note.pinned
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       <NotebookPenIcon className="size-3.5" aria-hidden="true" />
                     </span>
                     <h2 className="text-[13px] leading-snug font-semibold">
                       {note.title}
                     </h2>
                   </div>
-                  {note.pinned ? (
-                    <PinIcon
-                      className="size-3.5 shrink-0 fill-primary/10 text-primary"
-                      aria-label="Pinned note"
-                    />
-                  ) : null}
+
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <PinNoteButton note={note} />
+                  </div>
                 </div>
 
-                <p className="mt-2 line-clamp-3 flex-1 text-[11px] leading-relaxed text-muted-foreground">
-                  {note.excerpt}
+                <p className="mt-2 line-clamp-4 flex-1 text-[11px] leading-relaxed whitespace-pre-line text-muted-foreground">
+                  {note.excerpt || "This note is empty."}
                 </p>
 
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {note.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
+                {note.tags.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {note.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2">
+                  <p className="text-[10px] text-muted-foreground">
+                    Updated {formatRelativeTime(note.updatedAt, now)}
+                  </p>
+                  <div className="flex items-center gap-0.5">
+                    <EditNoteButton note={note} />
+                    <DeleteNoteButton note={note} />
+                  </div>
                 </div>
-
-                <p className="mt-3 border-t pt-2 text-[10px] text-muted-foreground">
-                  Updated {formatRelativeTime(note.updatedAt, now)}
-                </p>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
-  );
-}
-
-export default function NotesPage(props: NotesPageProps) {
-  return (
-    <Suspense
-      fallback={
-        <div className="h-64 animate-pulse rounded-xl border bg-muted/30" />
-      }
-    >
-      <NotesPreview {...props} />
-    </Suspense>
   );
 }

@@ -68,7 +68,7 @@ export function UpcomingEvents({
             </span>
             <p className="text-[13px] font-medium">No upcoming events</p>
             <p className="max-w-[220px] text-[11px] text-muted-foreground">
-              Scheduled events will appear here once the calendar module ships.
+              Scheduled events will appear here once you add them in Calendar.
             </p>
           </div>
         ) : (

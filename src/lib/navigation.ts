@@ -16,7 +16,6 @@ export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  phase?: number;
 }
 
 export interface NavSection {
@@ -30,23 +29,23 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
       { label: "My Tasks", href: "/tasks", icon: ListTodo },
-      { label: "Calendar", href: "/calendar", icon: CalendarDays, phase: 5 },
+      { label: "Calendar", href: "/calendar", icon: CalendarDays },
     ],
   },
   {
     label: "Life",
     items: [
-      { label: "Expenses", href: "/expenses", icon: Wallet, phase: 5 },
-      { label: "Habits", href: "/habits", icon: Flame, phase: 5 },
-      { label: "Notes", href: "/notes", icon: NotebookPen, phase: 5 },
-      { label: "Goals", href: "/goals", icon: Target, phase: 5 },
+      { label: "Expenses", href: "/expenses", icon: Wallet },
+      { label: "Habits", href: "/habits", icon: Flame },
+      { label: "Notes", href: "/notes", icon: NotebookPen },
+      { label: "Goals", href: "/goals", icon: Target },
     ],
   },
   {
     label: "Insights",
     items: [
-      { label: "Reports", href: "/reports", icon: BarChart3, phase: 6 },
-      { label: "Notifications", href: "/notifications", icon: Bell, phase: 6 },
+      { label: "Reports", href: "/reports", icon: BarChart3 },
+      { label: "Notifications", href: "/notifications", icon: Bell },
     ],
   },
 ];

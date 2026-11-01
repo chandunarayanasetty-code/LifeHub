@@ -4,7 +4,7 @@ import {
   AlertTriangleIcon,
   CalendarClockIcon,
   CheckCircle2Icon,
-  HardDriveIcon,
+  DatabaseIcon,
   ListTodoIcon,
   SearchXIcon,
 } from "lucide-react";
@@ -16,6 +16,7 @@ import { TaskItem } from "@/components/tasks/task-item";
 import { TaskStatusTabs } from "@/components/tasks/task-status-tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { requireUser } from "@/lib/auth/session";
 import { isSameDay, startOfDay } from "@/lib/date";
 import { getTaskCategories, listTasks } from "@/lib/tasks/repository";
 import {
@@ -48,14 +49,15 @@ interface TasksPageProps {
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
+  const user = await requireUser();
   const params = await searchParams;
   const query = parseTaskQuery(params);
   const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent;
   const now = new Date();
 
   const [tasks, categories] = await Promise.all([
-    listTasks(),
-    getTaskCategories(),
+    listTasks(user.id),
+    getTaskCategories(user.id),
   ]);
 
   const matching = tasks.filter((task) => matchesTaskFilters(task, query));
@@ -95,9 +97,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Tasks · Phase 2"
+        eyebrow="Tasks"
         title="My Tasks"
-        description="Create, edit, complete, and delete tasks. Every change is saved to a local file in this workspace and appears on the dashboard and in search."
+        description="Create, edit, complete, and delete tasks. Changes are stored in your account and appear on the dashboard, reports, and search."
         actions={
           <NewTaskButton
             categories={categories}
@@ -108,17 +110,25 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       />
 
       <div className="flex items-start gap-2.5 rounded-xl border border-dashed border-amber-500/35 bg-amber-500/5 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted-foreground">
-        <HardDriveIcon
+        <DatabaseIcon
           className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
           aria-hidden="true"
         />
         <p>
-          <span className="font-medium text-foreground">Saved on this machine.</span>{" "}
-          Tasks are written to{" "}
-          <code className="font-mono text-[10px]">.data/tasks.json</code>, which is
-          ignored by git. This is a single-user local file — not a database, and
-          not safe for production yet. Phase 3 moves tasks into PostgreSQL, and
-          you can restore the sample list from Settings.
+          {user.isDemo ? (
+            <>
+              <span className="font-medium text-foreground">Sample workspace.</span>{" "}
+              These tasks are sample records, not real user data. They are stored
+              in the LifeHub database for the demo account, and you can restore
+              the original sample list from Settings.
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">Saved in your account.</span>{" "}
+              Tasks live in the LifeHub database, scoped to your account, and
+              survive restarts and deployments. Only you can see them.
+            </>
+          )}
         </p>
       </div>
 
@@ -187,7 +197,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
               </p>
               <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
                 {tasks.length === 0
-                  ? "Use the New task button above to add your first one. It will be saved to the local task file."
+                  ? "Use the New task button above to add your first one. It is saved to your account and appears everywhere in LifeHub."
                   : "Try a different search, priority, category, or status tab."}
               </p>
               {tasks.length === 0 ? null : (

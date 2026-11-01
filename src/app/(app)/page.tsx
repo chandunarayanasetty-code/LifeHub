@@ -9,7 +9,7 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { BuildRoadmap } from "@/components/dashboard/build-roadmap";
+import { DataOwnershipCard } from "@/components/dashboard/data-ownership-card";
 import { CashflowChart } from "@/components/dashboard/cashflow-chart";
 import { GoalsCard } from "@/components/dashboard/goals-card";
 import { HabitSummary } from "@/components/dashboard/habit-summary";
@@ -20,6 +20,8 @@ import { TodayTasks } from "@/components/dashboard/today-tasks";
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { buildActivityFeed } from "@/lib/activity";
+import { requireUser } from "@/lib/auth/session";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import { startOfDay } from "@/lib/date";
 import {
@@ -28,9 +30,8 @@ import {
   formatPercent,
   getGreeting,
 } from "@/lib/format";
-import { demoUser, getMockData } from "@/lib/mock-data";
-import { listTasks } from "@/lib/tasks/repository";
 import { cn } from "@/lib/utils";
+import { getWorkspaceData } from "@/lib/workspace";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -39,12 +40,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const user = await requireUser();
   const now = new Date();
-  // Tasks are the one module with real mutations, so read them from the task
-  // store instead of regenerating the sample list on every request.
-  const tasks = await listTasks();
-  const data = { ...getMockData(now), tasks };
+  const data = await getWorkspaceData(user.id);
   const snapshot = getDashboardSnapshot(data, now);
+  const activity = buildActivityFeed(data);
   const greeting = getGreeting(now);
 
   const activeStatuses = new Set(["todo", "in-progress"]);
@@ -64,6 +64,14 @@ export default async function DashboardPage() {
         )
       : null;
 
+  const isEmptyWorkspace =
+    data.tasks.length === 0 &&
+    data.events.length === 0 &&
+    data.transactions.length === 0 &&
+    data.habits.length === 0 &&
+    data.notes.length === 0 &&
+    data.goals.length === 0;
+
   return (
     <div className="space-y-4 lg:space-y-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -74,22 +82,37 @@ export default async function DashboardPage() {
             </p>
             <Badge
               variant="outline"
-              className="h-5 gap-1.5 border-amber-500/25 bg-amber-500/5 px-1.5 text-[9px] font-medium text-amber-700 dark:text-amber-400"
-              title="Tasks are saved locally. Money, habits, goals, events, and notes remain generated sample data."
+              className={cn(
+                "h-5 gap-1.5 px-1.5 text-[9px] font-medium",
+                user.isDemo
+                  ? "border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+                  : "border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400",
+              )}
+              title={
+                user.isDemo
+                  ? "Every record in this workspace is generated sample data."
+                  : "Every figure here comes from records you created."
+              }
             >
-              <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-              Mixed data
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  user.isDemo ? "bg-amber-500" : "bg-emerald-500",
+                )}
+                aria-hidden="true"
+              />
+              {user.isDemo ? "Sample workspace" : "Live data"}
             </Badge>
           </div>
 
           <h1 className="mt-2 font-display text-[34px] leading-[1.08] tracking-tight text-balance sm:text-[42px]">
             {greeting},{" "}
-            <span className="text-primary">{demoUser.name}</span>
+            <span className="text-primary">{user.name.split(" ")[0]}</span>
           </h1>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
-            Here is what needs your attention today — a calm view of your
-            tasks, money, habits, and goals. Tasks save locally; the other
-            modules still use sample data.
+            {isEmptyWorkspace
+              ? "Your workspace is ready and completely empty. Add your first task, expense, habit, note, or event — everything you save appears here."
+              : "Here is what needs your attention today — a calm view of your tasks, money, habits, and goals."}
           </p>
         </div>
 
@@ -155,10 +178,10 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Monthly balance"
-          value={formatCurrency(snapshot.monthlySavingsCents, "USD", {
+          value={formatCurrency(snapshot.monthlySavingsCents, user.currency, {
             compact: true,
           })}
-          hint={`Income ${formatCurrency(snapshot.monthlyIncomeCents, "USD", { compact: true })} · Expenses ${formatCurrency(snapshot.monthlyExpenseCents, "USD", { compact: true })}`}
+          hint={`Income ${formatCurrency(snapshot.monthlyIncomeCents, user.currency, { compact: true })} · Expenses ${formatCurrency(snapshot.monthlyExpenseCents, user.currency, { compact: true })}`}
           icon={WalletIcon}
           iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
           valueClassName={
@@ -201,26 +224,27 @@ export default async function DashboardPage() {
 
       <section aria-label="Money and goals" className="grid gap-3 xl:grid-cols-2">
         <div className="min-w-0">
-          <CashflowChart data={snapshot.cashflow} />
+          <CashflowChart data={snapshot.cashflow} currency={user.currency} />
         </div>
         <div className="min-w-0">
           <GoalsCard goals={snapshot.activeGoals} now={now} />
         </div>
       </section>
 
-      <section aria-label="Activity and project status" className="grid gap-3 xl:grid-cols-3">
+      <section aria-label="Activity and data ownership" className="grid gap-3 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">
-          <RecentActivity items={data.activity} now={now} />
+          <RecentActivity items={activity} now={now} />
         </div>
         <div className="min-w-0">
-          <BuildRoadmap />
+          <DataOwnershipCard isDemo={user.isDemo} />
         </div>
       </section>
 
       <footer className="pt-1 text-center text-[10px] text-muted-foreground">
-        LifeHub · One place for everything that matters. Tasks are saved to a
-        local file in this workspace; money, habits, goals, events, and notes
-        remain generated sample data.
+        LifeHub · One place for everything that matters.{" "}
+        {user.isDemo
+          ? "This demo workspace contains clearly labelled sample data."
+          : "All figures come from records saved in your account."}
       </footer>
     </div>
   );

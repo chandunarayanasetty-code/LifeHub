@@ -24,7 +24,13 @@ const TOOLTIP_STYLE = {
   padding: "8px 10px",
 } as const;
 
-export function CashflowChart({ data }: { data: CashflowPoint[] }) {
+export function CashflowChart({
+  data,
+  currency = "USD",
+}: {
+  data: CashflowPoint[];
+  currency?: string;
+}) {
   const latest = data.at(-1);
   const latestNet = latest
     ? latest.incomeCents - latest.expenseCents
@@ -38,7 +44,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
             Income vs expenses
           </h2>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Last six months · sample amounts in USD
+            Last six months · amounts in {currency}
           </p>
         </div>
         <div className="text-right">
@@ -52,15 +58,15 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
                 : "text-[13px] font-semibold tabular-nums"
             }
           >
-            {formatCurrency(latestNet, "USD", { compact: true })}
+            {formatCurrency(latestNet, currency, { compact: true })}
           </p>
         </div>
       </div>
       <CardContent className="px-2 pt-3 pb-2 sm:px-3">
         <p className="sr-only">
           Income and expenses for the last six months. This month income is{" "}
-          {formatCurrency(latest?.incomeCents ?? 0)} and expenses are{" "}
-          {formatCurrency(latest?.expenseCents ?? 0)}.
+          {formatCurrency(latest?.incomeCents ?? 0, currency)} and expenses are{" "}
+          {formatCurrency(latest?.expenseCents ?? 0, currency)}.
         </p>
         <div className="h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -88,7 +94,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
                 width={48}
                 tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                 tickFormatter={(value: number) =>
-                  formatCurrency(value, "USD", { compact: true })
+                  formatCurrency(value, currency, { compact: true })
                 }
               />
               <Tooltip
@@ -99,7 +105,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
                   fontSize: "11px",
                   marginBottom: "4px",
                 }}
-                formatter={(value) => formatCurrency(Number(value), "USD")}
+                formatter={(value) => formatCurrency(Number(value), currency)}
               />
               <Bar
                 dataKey="incomeCents"
