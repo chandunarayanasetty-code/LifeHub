@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
@@ -72,6 +73,15 @@ export async function createDatabase(
     options.dataDirectory ??
     process.env.LIFEHUB_DATA_DIR ??
     DEFAULT_DATA_DIRECTORY;
+
+  // `.data` is gitignored, so a fresh clone has no data directory yet. PGlite
+  // creates its own directory but not missing parents, which made the first
+  // request fail with ENOENT on CI. `memory://` and other PGlite URL forms are
+  // not filesystem paths and must be left alone.
+  if (!dataDirectory.includes("://")) {
+    await mkdir(dataDirectory, { recursive: true });
+  }
+
   const pglite = new PGlite(dataDirectory);
   await pglite.waitReady;
 
