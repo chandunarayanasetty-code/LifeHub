@@ -274,10 +274,16 @@ reload, the phone layout and drawer, and dark mode persisting.
 npm run test:e2e
 ```
 
-The suite starts its own dev server on port 3100 with a separate database folder
-(`.data/pglite-e2e`) and the demo account seeded. Locally it uses the installed
-Chrome channel if present; CI installs Chromium. If your machine has no Chrome,
-run `npx playwright install chromium` first.
+Locally the suite starts its own dev server on port 3100 with a separate database
+folder (`.data/pglite-e2e`) and the demo account seeded. It uses the installed
+Chrome channel if present; if your machine has no Chrome, run
+`npx playwright install chromium` first.
+
+CI tests the artifact that actually gets deployed: the workflow builds the app,
+starts `next start` on port 3100, waits for `/login` to answer, and only then runs
+the same specs against Chromium. Starting the server in its own step means a
+startup failure is reported by the step that owns it, and the server log is
+published as an annotation.
 
 ---
 

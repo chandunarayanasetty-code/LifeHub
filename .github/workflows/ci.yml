@@ -46,6 +46,16 @@ jobs:
     name: End-to-end (Playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # A throwaway embedded database for this job only.
+      LIFEHUB_DATA_DIR: .data/pglite-e2e
+      # A production build skips the demo seed by default, but the specs sign in
+      # as the demo account. This is the documented test-only switch.
+      SEED_DEMO_DATA: "true"
+      # The production build is served over plain HTTP, where browsers reject
+      # `Secure` cookies. Test-only escape hatch; never set this on a real
+      # deployment.
+      LIFEHUB_ALLOW_INSECURE_COOKIES: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -60,17 +70,79 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # Playwright builds the app, starts `next start` on port 3100 with a
-      # throwaway embedded database, seeds the demo account, and runs the specs.
+      # E2E tests the artifact that gets deployed, not the dev server.
+      - name: Build
+        run: npm run build
+        timeout-minutes: 10
+
+      # Started here rather than by Playwright so a server that never answers is
+      # reported by the step that owns it, and its log can be published below.
+      - name: Start the production server
+        run: |
+          nohup npm run start -- -H 127.0.0.1 -p 3100 \
+            > "$RUNNER_TEMP/server.log" 2>&1 < /dev/null &
+          echo "SERVER_LOG=$RUNNER_TEMP/server.log" >> "$GITHUB_ENV"
+
+      - name: Wait for the server
+        run: |
+          set -uo pipefail
+          for attempt in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -m 5 -w '%{http_code}' \
+              http://127.0.0.1:3100/login || true)
+            code=${code:-000}
+            if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then
+              echo "Server answered HTTP $code after $attempt attempt(s)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error title=Server never became healthy::/login did not answer with a non-5xx status within 120s."
+          exit 1
+
       - name: Run end-to-end tests
         run: npm run test:e2e
         env:
           CI: "true"
 
+      # Playwright reports go to the run page; the server log is where startup
+      # failures show up, so publish its tail as an annotation. Annotations are
+      # readable from the public check-run API even when job logs are not.
+      - name: Publish server log
+        if: failure()
+        run: |
+          set -uo pipefail
+          echo "----- listeners -----"
+          (ss -ltnp || true) | grep -E 'State|:3100' || echo "nothing listening on 3100"
+          echo "----- next processes -----"
+          pgrep -af "next start" || echo "no next start process"
+
+          if [ -z "${SERVER_LOG:-}" ] || [ ! -s "$SERVER_LOG" ]; then
+            echo "No server log to publish."
+            exit 0
+          fi
+
+          echo "----- server log (tail) -----"
+          tail -n 80 "$SERVER_LOG"
+
+          # `%` and newlines must be escaped for the workflow-command format.
+          body=$(tail -c 6000 "$SERVER_LOG" \
+            | sed -e 's/%/%25/g' -e 's/\r$//' -e 's/$/%0A/' \
+            | tr -d '\n')
+          echo "::error title=Server log (tail)::${body:-<empty>}"
+
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+      - name: Upload server log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-log
+          path: ${{ runner.temp }}/server.log
+          if-no-files-found: ignore
           retention-days: 7

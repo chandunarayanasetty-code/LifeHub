@@ -4,11 +4,12 @@ import { defineConfig, devices } from "@playwright/test";
  * End-to-end tests.
  *
  * The app is started on port 3100 so a normal `npm run dev` on 3000 does not
- * clash. Locally Playwright reuses an existing server on that port and runs the
- * dev server, which keeps feedback fast. CI tests a real production build with
- * `next start`, because that is the artifact that gets deployed — and because a
- * production server has no on-demand compiler or file watcher to slow the first
- * request down.
+ * clash.
+ *
+ * Locally Playwright manages the dev server itself, which keeps feedback fast.
+ * CI starts the production artifact (`next build` + `next start`) in its own
+ * workflow step instead, so a slow or broken server is attributed to the right
+ * step and its log can be published as an annotation.
  */
 
 const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
@@ -42,23 +43,20 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: isCI
-      ? `npm run build && npm run start -- -p ${PORT}`
-      : `npm run dev -- -p ${PORT}`,
-    url: baseURL,
-    reuseExistingServer: !isCI,
-    // A cold CI build plus Chromium startup can take a few minutes.
-    timeout: isCI ? 420_000 : 180_000,
-    env: {
-      // Keep the embedded database local and make sure the demo account exists.
-      DATABASE_URL: "",
-      // A separate directory so E2E never opens the same PGlite files as a
-      // running `npm run dev`. PGlite is single-process.
-      LIFEHUB_DATA_DIR: ".data/pglite-e2e",
-      // CI serves a production build over plain HTTP, where Secure cookies are
-      // rejected by the browser. This is the documented test-only escape hatch.
-      ...(isCI ? { LIFEHUB_ALLOW_INSECURE_COOKIES: "true" } : {}),
-    },
-  },
+  // In CI the workflow starts `next start` before running the tests.
+  webServer: isCI
+    ? undefined
+    : {
+        command: `npm run dev -- -p ${PORT}`,
+        url: baseURL,
+        reuseExistingServer: true,
+        timeout: 180_000,
+        env: {
+          // Keep the embedded database local. A separate directory so E2E never
+          // opens the same PGlite files as a running `npm run dev`; PGlite is
+          // single-process.
+          DATABASE_URL: "",
+          LIFEHUB_DATA_DIR: ".data/pglite-e2e",
+        },
+      },
 });
