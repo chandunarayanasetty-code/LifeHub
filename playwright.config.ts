@@ -4,8 +4,11 @@ import { defineConfig, devices } from "@playwright/test";
  * End-to-end tests.
  *
  * The app is started on port 3100 so a normal `npm run dev` on 3000 does not
- * clash. Playwright reuses an existing server locally, but always starts a
- * fresh production build in CI.
+ * clash. Locally Playwright reuses an existing server on that port and runs the
+ * dev server, which keeps feedback fast. CI tests a real production build with
+ * `next start`, because that is the artifact that gets deployed — and because a
+ * production server has no on-demand compiler or file watcher to slow the first
+ * request down.
  */
 
 const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
@@ -40,18 +43,22 @@ export default defineConfig({
   ],
 
   webServer: {
-    // Dev mode keeps Secure cookies off (they need HTTPS in a real production
-    // deployment) so the browser can sign in over plain HTTP locally and in CI.
-    command: `npm run dev -- -p ${PORT}`,
+    command: isCI
+      ? `npm run build && npm run start -- -p ${PORT}`
+      : `npm run dev -- -p ${PORT}`,
     url: baseURL,
     reuseExistingServer: !isCI,
-    timeout: 180_000,
+    // A cold CI build plus Chromium startup can take a few minutes.
+    timeout: isCI ? 420_000 : 180_000,
     env: {
       // Keep the embedded database local and make sure the demo account exists.
       DATABASE_URL: "",
       // A separate directory so E2E never opens the same PGlite files as a
       // running `npm run dev`. PGlite is single-process.
       LIFEHUB_DATA_DIR: ".data/pglite-e2e",
+      // CI serves a production build over plain HTTP, where Secure cookies are
+      // rejected by the browser. This is the documented test-only escape hatch.
+      ...(isCI ? { LIFEHUB_ALLOW_INSECURE_COOKIES: "true" } : {}),
     },
   },
 });

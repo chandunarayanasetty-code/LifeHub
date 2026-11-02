@@ -129,6 +129,7 @@ at `/app/.data` and keep exactly one replica.
 | `DATABASE_URL` | Production | PostgreSQL connection string. Unset = embedded database. |
 | `LIFEHUB_DATA_DIR` | No | Directory for embedded database files (default `.data/pglite`). Ignored when `DATABASE_URL` is set. |
 | `SEED_DEMO_DATA` | No | `"true"` seeds the demo account in a production build of the embedded mode. |
+| `LIFEHUB_ALLOW_INSECURE_COOKIES` | No | Test-only. Lets a production build set non-`Secure` session cookies so the Playwright suite can sign in over plain HTTP. Never enable this on a real deployment. |
 
 Sessions live in the database, so signing out of one device signs out only that
 device, and restarting the app does not sign everyone out.

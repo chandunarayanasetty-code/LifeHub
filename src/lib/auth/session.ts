@@ -93,7 +93,11 @@ export async function createSession(userId: string): Promise<void> {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Secure cookies need HTTPS. CI tests a production build over plain HTTP,
+    // so it opts out explicitly; never set this on a real deployment.
+    secure:
+      process.env.NODE_ENV === "production" &&
+      process.env.LIFEHUB_ALLOW_INSECURE_COOKIES !== "true",
     path: "/",
     expires: expiresAt,
   });

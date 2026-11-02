@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { Geist, Instrument_Serif } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -53,7 +54,13 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+/**
+ * `children` is typed explicitly instead of using Next's generated
+ * `LayoutProps<"/">` helper: that type only exists after `next build`/`next dev`
+ * has written `.next/types`, so a plain `tsc --noEmit` on a fresh clone (as CI
+ * runs it) would fail with "Cannot find name 'LayoutProps'".
+ */
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
